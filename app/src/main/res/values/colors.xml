@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Adaptive icon background, matching the app's primary brand teal
+         (Theme.kt LightColors primary) so the launcher icon and in-app
+         palette are visually consistent. -->
+    <color name="ic_launcher_background">#0E7C66</color>
+</resources>
