@@ -1,0 +1,38 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.budgetide.app-mergeDebugResources-64:/values-night-v8/values-night-v8.xml",
+            "map": [
+                {
+                    "source": "/Users/akashpol/.gradle/caches/9.3.0/transforms/34bfa6b73dfa3e4dd803731c9e314114/transformed/core-splashscreen-1.0.1/res/values-night-v8/values-night-v8.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "85",
+                        "endOffsets": "136"
+                    }
+                },
+                {
+                    "source": "/Users/akashpol/Downloads/Budgetide/app/src/main/res/values-night/styles.xml",
+                    "from": {
+                        "startLines": "1,8",
+                        "startColumns": "4,4",
+                        "startOffsets": "16,371",
+                        "endLines": "6,12",
+                        "endColumns": "12,12",
+                        "endOffsets": "365,677"
+                    },
+                    "to": {
+                        "startLines": "3,9",
+                        "startColumns": "4,4",
+                        "startOffsets": "141,495",
+                        "endLines": "8,13",
+                        "endColumns": "12,12",
+                        "endOffsets": "490,801"
+                    }
+                }
+            ]
+        }
+    ]
+}

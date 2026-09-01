@@ -1,0 +1,26 @@
+<resources>
+    <style name="Theme.Budgetide" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/white</item>
+    </style>
+
+    <!-- Splash screen shown at cold start, before Compose content is ready.
+         windowSplashScreenAnimatedIcon is set explicitly to the real logo.
+         IMPORTANT: leaving this unset and relying on the "falls back to the
+         app's launcher icon" behavior only works on Android 12+ (API 31+),
+         where the native platform SplashScreen implements that fallback.
+         On API 26-30 devices, the core-splashscreen compat library does
+         NOT auto-derive the icon that way, and silently shows a generic
+         default (the stock Android robot) instead - which is exactly the
+         bug reported on another user's phone while looking fine on a
+         31+ device/emulator. Setting it explicitly makes this consistent
+         on every supported API level (26+).
+         postSplashScreenTheme hands off to the real app theme once done. -->
+    <style name="Theme.Budgetide.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Budgetide</item>
+    </style>
+</resources>
