@@ -64,7 +64,8 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshEntitlement() {
-        billingManager.queryExistingPurchases()
+        // Reconnects if needed, then re-checks owned purchases with Google Play.
+        billingManager.startConnection()
     }
 
     fun launchProPurchase(activity: Activity) {
@@ -83,6 +84,11 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
     val lending = dao.lending().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        // Verify the Pro purchase with Google Play at every app start (not only
+        // when the Pro screen is opened). The cached value covers the gap until
+        // Play answers.
+        billingManager.startConnection()
+
         // Fixed: seeding now checks the actual DB row count with a one-shot
         // suspend query (or a one-shot first() read of the flow) instead of
         // the StateFlow's ".value", which is still an empty list at this
@@ -123,10 +129,14 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun addGoal(name: String, target: Double) {
+        if (!target.isFinite() || target <= 0.0) return
         viewModelScope.launch { dao.insertGoal(GoalEntity(name=name, target=target)) }
     }
 
     fun addToGoal(goal: GoalEntity, amount: Double) {
+        // Ignore invalid amounts, and goals saved earlier with an invalid
+        // (zero/negative) target - those must be edited to a valid target first.
+        if (!amount.isFinite() || amount <= 0.0 || goal.target <= 0.0) return
         viewModelScope.launch {
             dao.updateGoal(goal.copy(saved = (goal.saved + amount).coerceAtMost(goal.target)))
         }
@@ -138,6 +148,7 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Full edit (name/target) - keeps whatever is already saved unless the caller changes it too. */
     fun updateGoal(goal: GoalEntity) {
+        if (!goal.target.isFinite() || goal.target <= 0.0) return
         viewModelScope.launch { dao.updateGoal(goal) }
     }
 

@@ -78,15 +78,30 @@ fun monthKey(millis: Long): Pair<Int, Int> {
 // MONEY FORMATTER
 // ============================================================
 
-fun money(v: Double): String {
-    // Fixed to Indian Rupees for every user regardless of device locale/region -
-    // using Locale.getDefault() here previously meant a phone set to a US/UK/etc
-    // region would show $/£ instead of ₹, which is not what we want.
-    val nf = java.text.NumberFormat.getCurrencyInstance(Locale("en", "IN"))
+/**
+ * Formats an amount using the currency of the user's device region
+ * (India -> ₹, US -> $, UK -> £, Eurozone -> €, ...). Unsupported or
+ * missing regions fall back to ₹. Only the symbol/format changes here;
+ * amounts the user enters are shown as typed.
+ */
+private var cachedLocale: Locale? = null
+private var cachedFormat: java.text.NumberFormat? = null
+
+private fun currencyFormat(): java.text.NumberFormat {
+    val locale = Locale.getDefault()
+    val cached = cachedFormat
+    if (cached != null && locale == cachedLocale) return cached
+
+    val nf = java.text.NumberFormat.getCurrencyInstance(locale)
+    nf.currency = com.budgetide.app.data.CurrencyUtil.active()
     nf.maximumFractionDigits = 0
     nf.minimumFractionDigits = 0
-    return nf.format(v)
+    cachedLocale = locale
+    cachedFormat = nf
+    return nf
 }
+
+fun money(v: Double): String = currencyFormat().format(v)
 
 
 // ============================================================
@@ -1250,23 +1265,23 @@ fun AddTransactionDialog(
 fun CalculatorScreen(vm: MoneyViewModel, onUpgradeClick: () -> Unit = {}) {
 
     var income by remember {
-        mutableStateOf("50000")
+        mutableStateOf(com.budgetide.app.data.CurrencyUtil.fromInrText(50000))
     }
 
     var essential by remember {
-        mutableStateOf("25000")
+        mutableStateOf(com.budgetide.app.data.CurrencyUtil.fromInrText(25000))
     }
 
     var other by remember {
-        mutableStateOf("5000")
+        mutableStateOf(com.budgetide.app.data.CurrencyUtil.fromInrText(5000))
     }
 
     var purchase by remember {
-        mutableStateOf("20000")
+        mutableStateOf(com.budgetide.app.data.CurrencyUtil.fromInrText(20000))
     }
 
     var monthlySave by remember {
-        mutableStateOf("10000")
+        mutableStateOf(com.budgetide.app.data.CurrencyUtil.fromInrText(10000))
     }
 
     var years by remember {
@@ -1799,6 +1814,9 @@ fun GoalDialog(vm: MoneyViewModel, existing: GoalEntity?, close: () -> Unit) {
         mutableStateOf(existing?.target?.let { if (it == it.toLong().toDouble()) it.toLong().toString() else it.toString() } ?: "")
     }
 
+    // Shown only after the user taps Save with invalid input.
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var targetError by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
 
@@ -1816,10 +1834,14 @@ fun GoalDialog(vm: MoneyViewModel, existing: GoalEntity?, close: () -> Unit) {
                     value = name,
                     onValueChange = {
                         name = it
+                        nameError = null
                     },
                     label = {
                         Text("Goal name")
-                    }
+                    },
+                    singleLine = true,
+                    isError = nameError != null,
+                    supportingText = nameError?.let { msg -> { Text(msg) } }
                 )
 
 
@@ -1827,10 +1849,17 @@ fun GoalDialog(vm: MoneyViewModel, existing: GoalEntity?, close: () -> Unit) {
                     value = target,
                     onValueChange = {
                         target = it
+                        targetError = null
                     },
                     label = {
                         Text("Target amount")
-                    }
+                    },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                    ),
+                    isError = targetError != null,
+                    supportingText = targetError?.let { msg -> { Text(msg) } }
                 )
             }
         },
@@ -1841,20 +1870,26 @@ fun GoalDialog(vm: MoneyViewModel, existing: GoalEntity?, close: () -> Unit) {
             Button(
                 onClick = {
 
-                    target
-                        .toDoubleOrNull()
-                        ?.let { t ->
+                    val trimmedName = name.trim()
+                    val t = target.trim().toDoubleOrNull()
 
-                            if (name.isNotBlank()) {
-                                if (existing == null) {
-                                    vm.addGoal(name, t)
-                                } else {
-                                    vm.updateGoal(existing.copy(name = name, target = t))
-                                }
-                            }
+                    nameError = if (trimmedName.isEmpty()) "Enter a goal name" else null
+                    targetError = when {
+                        t == null || !t.isFinite() -> "Enter a valid target amount"
+                        t <= 0.0 -> "Target amount must be greater than 0"
+                        else -> null
+                    }
+
+                    // Only save and close when everything is valid; otherwise
+                    // keep the dialog open and show the messages above.
+                    if (nameError == null && targetError == null && t != null) {
+                        if (existing == null) {
+                            vm.addGoal(trimmedName, t)
+                        } else {
+                            vm.updateGoal(existing.copy(name = trimmedName, target = t))
                         }
-
-                    close()
+                        close()
+                    }
                 }
             ) {
 

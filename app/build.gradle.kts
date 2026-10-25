@@ -14,6 +14,7 @@ plugins {
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 val hasSigningConfig = keystorePropertiesFile.exists()
+
 if (hasSigningConfig) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
@@ -26,14 +27,16 @@ android {
         applicationId = "com.budgetide.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 15
-        versionName = "1.9.1"
+        versionCode = 21
+        versionName = "1.9.3"
     }
 
     if (hasSigningConfig) {
         signingConfigs {
             create("release") {
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storeFile = rootProject.file(
+                    keystoreProperties.getProperty("storeFile")
+                )
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
@@ -43,20 +46,31 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Enable R8 code shrinking and obfuscation.
+            isMinifyEnabled = true
+
+            // Remove unused Android resources.
+            isShrinkResources = true
+
+            // Use the optimized default ProGuard rules and project rules.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+
             if (hasSigningConfig) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
     }
 
-    // ✅ FIX: Add JVM compatibility settings
+    // JVM compatibility settings.
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // ✅ FIX: Add Kotlin JVM target
+    // Kotlin JVM target.
     kotlinOptions {
         jvmTarget = "17"
     }
@@ -66,14 +80,8 @@ android {
         buildConfig = true
     }
 
-    // Works around a crash in "Lint Vital" (which auto-runs before every
-    // release build) when Gradle itself is executed with a JDK newer than
-    // this AGP/Lint version understands (e.g. JDK 25) - the analyzer's
-    // version parser throws IllegalArgumentException on the version string
-    // before lint even looks at any code. This disables that automatic
-    // release-build lint pass; it does not affect app behavior or the
-    // release build's correctness. The real fix is to run Gradle itself on
-    // an older JDK (17 or 21) via Android Studio's Gradle JDK setting.
+    // Works around a crash in "Lint Vital" when Gradle runs with a JDK
+    // newer than the current AGP/Lint version understands.
     lint {
         checkReleaseBuilds = false
     }
@@ -83,7 +91,7 @@ android {
     }
 }
 
-// ✅ FIX: Add JVM toolchain (recommended approach)
+// Kotlin JVM toolchain.
 kotlin {
     jvmToolchain(17)
 }
@@ -112,8 +120,6 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.core:core-splashscreen:1.0.1")
 
-    // One-time "Budgetide Pro" purchase via Google Play Billing.
-    // Requires a matching one-time (INAPP) product to be created in Play
-    // Console with the exact same product ID used in BillingManager.kt.
-    implementation("com.android.billingclient:billing-ktx:7.1.1")
+    // One-time Budgetide Pro purchase via Google Play Billing.
+    implementation("com.android.billingclient:billing-ktx:8.0.0")
 }
